@@ -1,49 +1,83 @@
-import React, { useState, useEffect } from 'react';
-import logo from './logo.svg';
+import React, { useEffect, useState } from 'react';
 import './App.css';
+import Header from './components/Header';
+import TodoForm from './components/TodoForm';
+import TodoList from './components/TodoList';
 
 // PUBLIC_INTERFACE
-function App() {
-  const [theme, setTheme] = useState('light');
+export default function App() {
+  /**
+   * The main application component for the Todo app.
+   * Manages todo state, provides handlers for add, edit, delete, and toggle complete,
+   * and renders the UI using child components.
+   */
 
-  // Effect to apply theme to document element
+  // Initialize todos from localStorage lazily
+  const [todos, setTodos] = useState(() => {
+    try {
+      const raw = localStorage.getItem('todos');
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      console.warn('Failed to parse todos from localStorage:', e);
+      return [];
+    }
+  });
+
+  // Persist todos to localStorage on change
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
+    try {
+      localStorage.setItem('todos', JSON.stringify(todos));
+    } catch (e) {
+      console.warn('Failed to save todos to localStorage:', e);
+    }
+  }, [todos]);
 
-  // PUBLIC_INTERFACE
-  const toggleTheme = () => {
-    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
+  // Add a new todo
+  const addTodo = (text) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const newTodo = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      text: trimmed,
+      completed: false,
+      createdAt: new Date().toISOString(),
+    };
+    setTodos((prev) => [newTodo, ...prev]);
+  };
+
+  // Update an existing todo's text
+  const updateTodo = (id, newText) => {
+    const trimmed = newText.trim();
+    if (!trimmed) return;
+    setTodos((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, text: trimmed } : t))
+    );
+  };
+
+  // Toggle completion state
+  const toggleTodo = (id) => {
+    setTodos((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
+    );
+  };
+
+  // Delete a todo
+  const deleteTodo = (id) => {
+    setTodos((prev) => prev.filter((t) => t.id !== id));
   };
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <button 
-          className="theme-toggle" 
-          onClick={toggleTheme}
-          aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-        >
-          {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
-        </button>
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <p>
-          Current theme: <strong>{theme}</strong>
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div className="app">
+      <div className="app-container">
+        <Header />
+        <TodoForm onAdd={addTodo} />
+        <TodoList
+          todos={todos}
+          onToggle={toggleTodo}
+          onDelete={deleteTodo}
+          onUpdate={updateTodo}
+        />
+      </div>
     </div>
   );
 }
-
-export default App;
